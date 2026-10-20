@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PTW Revenue & AR Tracker</title>
     <link rel="stylesheet" href="style.css">
+    <!-- 引入 SheetJS 函式庫用於匯出 Excel (.xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <header>
@@ -24,6 +26,32 @@
             <h3>Active Projects</h3>
             <span id="projects">0</span>
         </div>
+    </section>
+
+    <!-- 每年各客戶收入統計表 -->
+    <section class="table-container" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2>Annual Revenue by Customer (年度客戶收入統計)</h2>
+            <div>
+                <label for="yearFilter" style="font-weight: bold; font-size: 14px;">Select Year: </label>
+                <select id="yearFilter" onchange="renderAnnualSummary()" style="width: auto; display: inline-block; padding: 5px 10px;">
+                    <!-- 自動動態填入年份 -->
+                </select>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer (客戶)</th>
+                    <th>Paid Revenue (已收收入)</th>
+                    <th>Pending AR (未收應收)</th>
+                    <th>Total Contract Amount (總合約金額)</th>
+                </tr>
+            </thead>
+            <tbody id="annualSummary">
+                <tr><td colspan="4" style="text-align:center;">Loading summary...</td></tr>
+            </tbody>
+        </table>
     </section>
 
     <section class="form">
@@ -129,14 +157,19 @@
             </div>
         </div>
 
-        <div class="form-actions">
-            <button type="button" id="submitBtn" onclick="saveRecord()">Save Record</button>
-            <button type="button" id="cancelBtn" onclick="resetForm()" style="display: none;">Cancel</button>
+        <div class="form-actions" style="justify-content: space-between;">
+            <div>
+                <button type="button" id="submitBtn" onclick="saveRecord()">Save Record</button>
+                <button type="button" id="cancelBtn" onclick="resetForm()" style="display: none;">Cancel</button>
+            </div>
+            <!-- 匯出 Excel 按鈕 -->
+            <button type="button" onclick="exportToExcel()" style="background-color: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 15px;">📊 Export Excel</button>
         </div>
     </section>
 
     <section class="table-container">
-        <table>
+        <h2>Detailed Records (明細紀錄)</h2>
+        <table style="margin-top: 15px;">
             <thead>
                 <tr>
                     <th>Date</th>

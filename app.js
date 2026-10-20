@@ -17,12 +17,14 @@ async function fetchRecords() {
     recordData = await response.json();
     renderTable();
     updateDashboard();
+    setupYearFilter();
+    renderAnnualSummary();
   } catch (error) {
     console.error("Error fetching data:", error);
   }
 }
 
-// 渲染表格內容
+// 渲染明細表格
 function renderTable() {
   const tbody = document.getElementById("records");
   if (!tbody) return;
@@ -60,6 +62,122 @@ function renderTable() {
     `;
     tbody.appendChild(tr);
   });
+}
+
+// 動態建立年份下拉選單
+function setupYearFilter() {
+  const yearSelect = document.getElementById("yearFilter");
+  if (!yearSelect) return;
+
+  const currentSelected = yearSelect.value;
+  const years = new Set();
+  const currentYear = new Date().getFullYear();
+  years.add(currentYear);
+
+  recordData.forEach(row => {
+    if (row.date) {
+      const year = new Date(row.date).getFullYear();
+      if (!isNaN(year)) years.add(year);
+    }
+  });
+
+  const sortedYears = Array.from(years).sort((a, b) => b - a);
+  yearSelect.innerHTML = "";
+  sortedYears.forEach(year => {
+    const option = document.createElement("option");
+    option.value = year;
+    option.textContent = year + " 年";
+    yearSelect.appendChild(option);
+  });
+
+  if (currentSelected && sortedYears.includes(Number(currentSelected))) {
+    yearSelect.value = currentSelected;
+  }
+}
+
+// 渲染「每年各客戶收入統計表」
+function renderAnnualSummary() {
+  const tbody = document.getElementById("annualSummary");
+  const yearSelect = document.getElementById("yearFilter");
+  if (!tbody || !yearSelect) return;
+
+  const selectedYear = Number(yearSelect.value);
+  tbody.innerHTML = "";
+
+  // 整理選定年份各客戶的統計數據
+  const customerStats = {};
+
+  recordData.forEach(row => {
+    if (!row.date) return;
+    const rowYear = new Date(row.date).getFullYear();
+    if (rowYear !== selectedYear) return;
+
+    const customer = row.customer || "Unassigned";
+    if (!customerStats[customer]) {
+      customerStats[customer] = { paid: 0, pending: 0, total: 0 };
+    }
+
+    const totalAmount = Number(row.qty || 0) * Number(row.unitPrice || 0);
+    customerStats[customer].total += totalAmount;
+
+    if (row.paidStatus === "Paid") {
+      customerStats[customer].paid += totalAmount;
+    } else {
+      customerStats[customer].pending += totalAmount;
+    }
+  });
+
+  const customers = Object.keys(customerStats);
+  if (customers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">${selectedYear} 年無紀錄</td></tr>`;
+    return;
+  }
+
+  customers.forEach(cust => {
+    const stat = customerStats[cust];
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${cust}</strong></td>
+      <td style="color: #27ae60; font-weight: bold;">$${stat.paid.toLocaleString()}</td>
+      <td style="color: #e67e22; font-weight: bold;">$${stat.pending.toLocaleString()}</td>
+      <td><strong>$${stat.total.toLocaleString()}</strong></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// 匯出功能：生成真正的 Excel .xlsx 檔案
+function exportToExcel() {
+  if (!recordData || recordData.length === 0) {
+    alert("目前沒有可匯出的紀錄！");
+    return;
+  }
+
+  // 格式化輸出欄位
+  const exportList = recordData.map(item => ({
+    "Date (日期)": item.date || "",
+    "Customer (客戶)": item.customer || "",
+    "PR No (請購單號)": item.prNo || "",
+    "PO No (採購單號)": item.poNo || "",
+    "Invoice No (發票號碼)": item.invoiceNo || "",
+    "Category (類別)": item.category || "",
+    "Description (項目說明)": item.description || "",
+    "Qty (數量)": item.qty || 1,
+    "Unit Price (單價)": item.unitPrice || 0,
+    "Total Amount (總金額)": (Number(item.qty || 0) * Number(item.unitPrice || 0)),
+    "Paid Status (付款狀態)": item.paidStatus || "Pending",
+    "Project Status (專案狀態)": item.status || "Open",
+    "Owner (負責人)": item.owner || ""
+  }));
+
+  // 使用 SheetJS 產生活頁簿
+  const worksheet = XLSX.utils.json_to_sheet(exportList);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Revenue & AR");
+
+  // 下載 xlsx
+  const fileName = `PTW_Revenue_Tracker_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
 }
 
 // 點擊 Edit 帶入舊資料
@@ -152,7 +270,7 @@ async function saveRecord() {
     await fetchRecords();
   } catch (error) {
     console.error("Error saving record:", error);
-    alert("儲存失敗，請檢查 API 網址與連線！");
+    alert("儲存失敗！");
   } finally {
     submitBtn.disabled = false;
   }
