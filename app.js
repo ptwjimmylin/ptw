@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz0UIO0UegK13ZhHcWqbmgf_UvtaoRcgfBvgPexbF6l-kEvjiQmLOaZGL4V143NTEQlxQ/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzuEqNCxttUf61Gc90EyfMwMti5uQ6knBYmQ3WS7nBx42vuc0v9R63il307tnbUUU3W_Q/exec";
 
 let recordData = [];
 
@@ -24,6 +24,22 @@ async function fetchRecords() {
   }
 }
 
+// 計算應收 AR 金額與亮燈標籤
+function getARAlertInfo(row, totalAmount) {
+  const paidStatus = String(row.paidStatus || 'Pending').trim();
+  const partialPaid = Number(row.partialPaidAmount || 0);
+
+  if (paidStatus === "Paid") {
+    return { ar: 0, html: `<span class="badge badge-paid">✅ Cleared</span>` };
+  } else if (paidStatus === "Partial") {
+    const ar = Math.max(0, totalAmount - partialPaid);
+    return { ar: ar, html: `<span class="badge" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;">⚠️ AR: $${ar.toLocaleString()}</span>` };
+  } else {
+    // Pending
+    return { ar: totalAmount, html: `<span class="badge" style="background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;">🔴 Unpaid: $${totalAmount.toLocaleString()}</span>` };
+  }
+}
+
 // 渲染明細表格
 function renderTable() {
   const tbody = document.getElementById("records");
@@ -31,7 +47,7 @@ function renderTable() {
   tbody.innerHTML = "";
 
   if (!recordData || recordData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;">No records found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;">No records found.</td></tr>';
     return;
   }
 
@@ -40,6 +56,8 @@ function renderTable() {
     const qty = Number(row.qty || 0);
     const unitPrice = Number(row.unitPrice || 0);
     const total = qty * unitPrice;
+    const partialPaid = Number(row.partialPaidAmount || 0);
+    const arInfo = getARAlertInfo(row, total);
 
     tr.innerHTML = `
       <td>${row.date || ''}</td>
@@ -52,7 +70,9 @@ function renderTable() {
       <td>${row.category || ''}</td>
       <td>${row.description || ''}</td>
       <td>$${total.toLocaleString()}</td>
+      <td>$${partialPaid.toLocaleString()}</td>
       <td><span class="badge ${getPaidBadgeClass(row.paidStatus)}">${row.paidStatus || 'Pending'}</span></td>
+      <td>${arInfo.html}</td>
       <td>${row.status || 'Open'}</td>
       <td>${row.owner || ''}</td>
       <td>
@@ -66,7 +86,7 @@ function renderTable() {
   });
 }
 
-// 解析年份
+// 提取年份
 function getYearFromRecord(dateVal) {
   if (!dateVal) return new Date().getFullYear();
   const str = String(dateVal).trim();
@@ -125,10 +145,16 @@ function renderAnnualSummary() {
     }
 
     const totalAmount = Number(row.qty || 0) * Number(row.unitPrice || 0);
+    const partialPaid = Number(row.partialPaidAmount || 0);
+    const paidStatus = String(row.paidStatus || 'Pending').trim();
+
     customerStats[customer].total += totalAmount;
 
-    if (String(row.paidStatus).trim() === "Paid") {
+    if (paidStatus === "Paid") {
       customerStats[customer].paid += totalAmount;
+    } else if (paidStatus === "Partial") {
+      customerStats[customer].paid += partialPaid;
+      customerStats[customer].pending += Math.max(0, totalAmount - partialPaid);
     } else {
       customerStats[customer].pending += totalAmount;
     }
@@ -153,7 +179,7 @@ function renderAnnualSummary() {
   });
 }
 
-// 點擊 Edit 帶入舊資料
+// 點擊 Edit 帶入資料
 function editRecord(id) {
   const target = recordData.find(item => String(item.id).trim() === String(id).trim());
   if (!target) return;
@@ -170,6 +196,7 @@ function editRecord(id) {
   document.getElementById("description").value = target.description || "";
   document.getElementById("qty").value = target.qty !== undefined ? target.qty : 1;
   document.getElementById("unitPrice").value = target.unitPrice !== undefined ? target.unitPrice : 0;
+  document.getElementById("partialPaidAmount").value = target.partialPaidAmount !== undefined ? target.partialPaidAmount : 0;
   document.getElementById("paidStatus").value = target.paidStatus || "Pending";
   document.getElementById("status").value = target.status || "Open";
   document.getElementById("owner").value = target.owner || "";
@@ -196,6 +223,7 @@ function resetForm() {
   document.getElementById("description").value = "";
   document.getElementById("qty").value = "1";
   document.getElementById("unitPrice").value = "0";
+  document.getElementById("partialPaidAmount").value = "0";
   document.getElementById("paidStatus").value = "Pending";
   document.getElementById("status").value = "Open";
   document.getElementById("owner").value = "";
@@ -231,6 +259,7 @@ async function saveRecord() {
     description: document.getElementById("description").value,
     qty: Number(document.getElementById("qty").value || 1),
     unitPrice: Number(document.getElementById("unitPrice").value || 0),
+    partialPaidAmount: Number(document.getElementById("partialPaidAmount").value || 0),
     paidStatus: document.getElementById("paidStatus").value,
     status: document.getElementById("status").value,
     owner: document.getElementById("owner").value
@@ -283,23 +312,34 @@ function exportToExcel() {
     return;
   }
 
-  const exportList = recordData.map(item => ({
-    "Date (日期)": item.date || "",
-    "Status (進度狀態)": item.statusText || "",
-    "Customer (客戶)": item.customer || "",
-    "Site/Fab (廠別)": item.site || "",
-    "PR No (請購單號)": item.prNo || "",
-    "PO No (採購單號)": item.poNo || "",
-    "Invoice No (發票號碼)": item.invoiceNo || "",
-    "Category (類別)": item.category || "",
-    "Description (項目說明)": item.description || "",
-    "Qty (數量)": item.qty || 1,
-    "Unit Price (單價)": item.unitPrice || 0,
-    "Total Amount (總金額)": (Number(item.qty || 0) * Number(item.unitPrice || 0)),
-    "Paid Status (付款狀態)": item.paidStatus || "Pending",
-    "Project Status (專案狀態)": item.status || "Open",
-    "Owner (負責人)": item.owner || ""
-  }));
+  const exportList = recordData.map(item => {
+    const total = (Number(item.qty || 0) * Number(item.unitPrice || 0));
+    const partial = Number(item.partialPaidAmount || 0);
+    const paidStatus = String(item.paidStatus || 'Pending').trim();
+    let arAmount = total;
+    if (paidStatus === 'Paid') arAmount = 0;
+    else if (paidStatus === 'Partial') arAmount = Math.max(0, total - partial);
+
+    return {
+      "Date (日期)": item.date || "",
+      "Status (進度狀態)": item.statusText || "",
+      "Customer (客戶)": item.customer || "",
+      "Site/Fab (廠別)": item.site || "",
+      "PR No (請購單號)": item.prNo || "",
+      "PO No (採購單號)": item.poNo || "",
+      "Invoice No (發票號碼)": item.invoiceNo || "",
+      "Category (類別)": item.category || "",
+      "Description (項目說明)": item.description || "",
+      "Qty (數量)": item.qty || 1,
+      "Unit Price (單價)": item.unitPrice || 0,
+      "Total Amount (總金額)": total,
+      "Partial Paid Amount (已部分付款)": partial,
+      "Paid Status (付款狀態)": paidStatus,
+      "Pending AR (未收應收金額)": arAmount,
+      "Project Status (專案狀態)": item.status || "Open",
+      "Owner (負責人)": item.owner || ""
+    };
+  });
 
   const worksheet = XLSX.utils.json_to_sheet(exportList);
   const workbook = XLSX.utils.book_new();
@@ -309,7 +349,7 @@ function exportToExcel() {
   XLSX.writeFile(workbook, fileName);
 }
 
-// 更新頂部 Dashboard KPI
+// 更新頂部 Dashboard KPI (含全新 Active Projects 與 AR 邏輯)
 function updateDashboard() {
   let totalRevenue = 0;
   let pendingAR = 0;
@@ -317,10 +357,29 @@ function updateDashboard() {
 
   recordData.forEach(row => {
     const total = Number(row.qty || 0) * Number(row.unitPrice || 0);
-    if (String(row.paidStatus).trim() === "Paid") totalRevenue += total;
-    else if (String(row.paidStatus).trim() === "Pending") pendingAR += total;
+    const partialPaid = Number(row.partialPaidAmount || 0);
+    const paidStatus = String(row.paidStatus || 'Pending').trim();
+    const category = String(row.category || '').trim();
 
-    if (row.status === "Open" || row.status === "In Progress") activeProjects++;
+    // 1. 收入與 AR 計算
+    if (paidStatus === "Paid") {
+      totalRevenue += total;
+    } else if (paidStatus === "Partial") {
+      totalRevenue += partialPaid;
+      pendingAR += Math.max(0, total - partialPaid);
+    } else {
+      // Pending
+      pendingAR += total;
+    }
+
+    // 2. 新邏輯：Active Projects
+    // Category 包含 Project 或 Upgrade，且 Paid Status 為 Paid 或 Partial
+    const isProjectOrUpgrade = (category === "Project" || category === "Upgrade");
+    const isPaidOrPartial = (paidStatus === "Paid" || paidStatus === "Partial");
+
+    if (isProjectOrUpgrade && isPaidOrPartial) {
+      activeProjects++;
+    }
   });
 
   document.getElementById("revenue").innerText = `$${totalRevenue.toLocaleString()}`;

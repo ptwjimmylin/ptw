@@ -136,6 +136,12 @@
                 <input type="number" id="unitPrice" value="0" min="0" placeholder="Unit Price">
             </div>
 
+            <!-- 新增：已部分付款金額 -->
+            <div class="form-group">
+                <label for="partialPaidAmount">Partial Paid Amount (部分付款金額)</label>
+                <input type="number" id="partialPaidAmount" value="0" min="0" placeholder="部分付款金額">
+            </div>
+
             <div class="form-group">
                 <label for="paidStatus">Paid Status (付款狀態)</label>
                 <select id="paidStatus">
@@ -155,7 +161,6 @@
                 </select>
             </div>
 
-            <!-- Owner 改為可自由填寫文字輸入框 -->
             <div class="form-group">
                 <label for="owner">Owner (負責人)</label>
                 <input type="text" id="owner" placeholder="填寫負責人姓名">
@@ -186,14 +191,16 @@
                     <th>Category</th>
                     <th>Description</th>
                     <th>Total Amount</th>
+                    <th>Partial Paid</th>
                     <th>Paid Status</th>
+                    <th>AR Warning (應收亮燈)</th>
                     <th>Project Status</th>
                     <th>Owner</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody id="records">
-                <tr><td colspan="14" style="text-align:center;">Loading data...</td></tr>
+                <tr><td colspan="16" style="text-align:center;">Loading data...</td></tr>
             </tbody>
         </table>
     </section>
