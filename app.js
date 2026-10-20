@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/library/d/1EEL2WWgXqc0YKSzwjkBJotq0u3cZVC0xIxBGIyQe626S1CB90SiBqKQj/10";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwz1mIlmzidcudz0JDXqhquZs69EoJfBLX5M_IZFU4uLrHp9ATCv4l_SRYo14p_H6LI1g/exec";
 
 let recordData = [];
 
@@ -53,16 +53,15 @@ async function fetchRecords() {
   }
 }
 
-// 計算累加已付與 AR 亮燈狀態
+// 計算累加已付與 AR 亮燈狀態 (相容舊資料與全新分期欄位)
 function getRecordPaidAndAR(row, totalAmount) {
-  // 相容舊資料 partialPaidAmount 或 4 期金額
-  const i1 = Number(row.inst1 || row.partialPaidAmount || 0);
+  const i1 = Number(row.inst1 !== undefined ? row.inst1 : (row.partialPaidAmount || 0));
   const i2 = Number(row.inst2 || 0);
   const i3 = Number(row.inst3 || 0);
   const i4 = Number(row.inst4 || 0);
   const sumPaid = i1 + i2 + i3 + i4;
 
-  let displayPaidStatus = row.paidStatus || 'Pending';
+  let displayPaidStatus = String(row.paidStatus || 'Pending').trim();
   if (totalAmount > 0 && sumPaid >= totalAmount) {
     displayPaidStatus = "Paid";
   } else if (sumPaid > 0 && sumPaid < totalAmount && displayPaidStatus !== "Paid") {
@@ -455,7 +454,7 @@ function updateDashboard() {
   });
 
   document.getElementById("revenue").innerText = `$${totalRevenue.toLocaleString()}`;
-  document.getElementById("pending").innerText = `$${pendingAR.toLocaleString()}`;
+  document.getElementById("pending").innerText = `$${pendingAR.innerText = `$${pendingAR.toLocaleString()}`}`;
   document.getElementById("projects").innerText = activeProjects;
 }
 
