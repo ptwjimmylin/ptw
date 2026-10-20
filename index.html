@@ -27,7 +27,7 @@
         </div>
     </section>
 
-    <!-- 每年各客戶收入統計表 -->
+    <!-- 每年各客戶收入統計表 (附帶動態上下滑動條 Scrollbar) -->
     <section class="table-container" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2>Annual Revenue by Customer (年度客戶收入統計)</h2>
@@ -137,7 +137,7 @@
                 <input type="number" id="unitPrice" value="0" min="0" placeholder="Unit Price" oninput="autoUpdatePaidStatus()">
             </div>
 
-            <!-- 分期付款欄位 (1st ~ 4th Installments) -->
+            <!-- 分期付款輸入框 (支援動態自動連動選單) -->
             <div class="form-group">
                 <label for="inst1">1st Installment (第 1 期款)</label>
                 <input type="number" id="inst1" value="0" min="0" placeholder="第 1 期款" oninput="autoUpdatePaidStatus()">

@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwz1mIlmzidcudz0JDXqhquZs69EoJfBLX5M_IZFU4uLrHp9ATCv4l_SRYo14p_H6LI1g/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyjSKPdAXZIr2Ec9qNhplMn_JxeTqeTscsxINEleWtMhAtiv0PeVouHkMGrivfIOPM5Kg/exec";
 
 let recordData = [];
 
@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchRecords();
 });
 
-// 計算目前 4 期付款累積總額
+// 計算 4 期付款累積總額
 function getSumInstallmentsFromForm() {
   const i1 = Number(document.getElementById("inst1")?.value || 0);
   const i2 = Number(document.getElementById("inst2")?.value || 0);
@@ -43,6 +43,9 @@ function autoUpdatePaidStatus() {
 async function fetchRecords() {
   try {
     const response = await fetch(GAS_API_URL);
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
     recordData = await response.json();
     renderTable();
     updateDashboard();
@@ -50,10 +53,14 @@ async function fetchRecords() {
     renderAnnualSummary();
   } catch (error) {
     console.error("Error fetching data:", error);
+    const tbody = document.getElementById("records");
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="20" style="text-align:center; color:red;">連線失敗，請檢查 API 網址與 Apps Script 權限！</td></tr>';
+    }
   }
 }
 
-// 計算累加已付與 AR 亮燈狀態 (相容舊資料與全新分期欄位)
+// 計算累加已付與 AR 亮燈狀態
 function getRecordPaidAndAR(row, totalAmount) {
   const i1 = Number(row.inst1 !== undefined ? row.inst1 : (row.partialPaidAmount || 0));
   const i2 = Number(row.inst2 || 0);
@@ -345,16 +352,20 @@ async function saveRecord() {
   submitBtn.innerText = recordId ? "Updating..." : "Saving...";
 
   try {
-    await fetch(GAS_API_URL, {
+    const res = await fetch(GAS_API_URL, {
       method: "POST",
       body: JSON.stringify(payload)
     });
+
+    if (!res.ok) {
+      throw new Error("API post error");
+    }
 
     resetForm();
     await fetchRecords();
   } catch (error) {
     console.error("Error saving record:", error);
-    alert("儲存失敗，請重試！");
+    alert("儲存失敗，請檢查 API 網址與連線！");
   } finally {
     submitBtn.disabled = false;
   }
@@ -454,7 +465,7 @@ function updateDashboard() {
   });
 
   document.getElementById("revenue").innerText = `$${totalRevenue.toLocaleString()}`;
-  document.getElementById("pending").innerText = `$${pendingAR.innerText = `$${pendingAR.toLocaleString()}`}`;
+  document.getElementById("pending").innerText = `$${pendingAR.toLocaleString()}`;
   document.getElementById("projects").innerText = activeProjects;
 }
 
