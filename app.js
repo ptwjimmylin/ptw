@@ -64,18 +64,16 @@ function renderTable() {
   });
 }
 
-// 通用年份解析函式（解決各瀏覽器日期解析相容問題）
-function parseYearFromDate(dateStr) {
-  if (!dateStr) return null;
-  const str = String(dateStr).trim();
-  // 先嘗試正規表示式匹配 yyyy-mm-dd
+// 提煉年份的萬用解析函式（直接切前 4 位數字，避開所有時區與格式問題）
+function getYearFromRecord(dateVal) {
+  if (!dateVal) return new Date().getFullYear();
+  const str = String(dateVal).trim();
   const match = str.match(/^(\d{4})/);
   if (match) {
     return Number(match[1]);
   }
-  const d = new Date(str);
-  const y = d.getFullYear();
-  return isNaN(y) ? null : y;
+  const y = new Date(str).getFullYear();
+  return isNaN(y) ? new Date().getFullYear() : y;
 }
 
 // 動態建立年份下拉選單
@@ -83,14 +81,15 @@ function setupYearFilter() {
   const yearSelect = document.getElementById("yearFilter");
   if (!yearSelect) return;
 
-  const currentSelected = yearSelect.value;
   const years = new Set();
   const currentYear = new Date().getFullYear();
   years.add(currentYear);
 
   recordData.forEach(row => {
-    const year = parseYearFromDate(row.date);
-    if (year) years.add(year);
+    if (row.date) {
+      const y = getYearFromRecord(row.date);
+      if (y) years.add(y);
+    }
   });
 
   const sortedYears = Array.from(years).sort((a, b) => b - a);
@@ -102,11 +101,7 @@ function setupYearFilter() {
     yearSelect.appendChild(option);
   });
 
-  if (currentSelected && sortedYears.includes(Number(currentSelected))) {
-    yearSelect.value = currentSelected;
-  } else if (sortedYears.length > 0) {
-    yearSelect.value = sortedYears[0];
-  }
+  yearSelect.value = sortedYears[0];
 }
 
 // 渲染「每年各客戶收入統計表」
@@ -115,13 +110,13 @@ function renderAnnualSummary() {
   const yearSelect = document.getElementById("yearFilter");
   if (!tbody || !yearSelect) return;
 
-  const selectedYear = Number(yearSelect.value);
+  const selectedYear = Number(yearSelect.value) || new Date().getFullYear();
   tbody.innerHTML = "";
 
   const customerStats = {};
 
   recordData.forEach(row => {
-    const rowYear = parseYearFromDate(row.date);
+    const rowYear = getYearFromRecord(row.date);
     if (rowYear !== selectedYear) return;
 
     const customer = row.customer || "Unassigned";
@@ -132,7 +127,7 @@ function renderAnnualSummary() {
     const totalAmount = Number(row.qty || 0) * Number(row.unitPrice || 0);
     customerStats[customer].total += totalAmount;
 
-    if (row.paidStatus === "Paid") {
+    if (String(row.paidStatus).trim() === "Paid") {
       customerStats[customer].paid += totalAmount;
     } else {
       customerStats[customer].pending += totalAmount;
@@ -166,7 +161,7 @@ function exportToExcel() {
   }
 
   if (typeof XLSX === "undefined") {
-    alert("Excel 匯出元件載入中，請稍後再試或重新整理頁面！");
+    alert("Excel 元件加載中，請重新整理頁面後再試！");
     return;
   }
 
@@ -314,8 +309,8 @@ function updateDashboard() {
 
   recordData.forEach(row => {
     const total = Number(row.qty || 0) * Number(row.unitPrice || 0);
-    if (row.paidStatus === "Paid") totalRevenue += total;
-    else if (row.paidStatus === "Pending") pendingAR += total;
+    if (String(row.paidStatus).trim() === "Paid") totalRevenue += total;
+    else if (String(row.paidStatus).trim() === "Pending") pendingAR += total;
 
     if (row.status === "Open" || row.status === "In Progress") activeProjects++;
   });
