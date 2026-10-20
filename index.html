@@ -27,7 +27,7 @@
         </div>
     </section>
 
-    <!-- 每年各客戶收入統計表 (附帶動態上下滑動條 Scrollbar) -->
+    <!-- 每年各客戶收入統計表 -->
     <section class="table-container" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2>Annual Revenue by Customer (年度客戶收入統計)</h2>
@@ -137,9 +137,25 @@
                 <input type="number" id="unitPrice" value="0" min="0" placeholder="Unit Price" oninput="autoUpdatePaidStatus()">
             </div>
 
+            <!-- 分期付款欄位 (1st ~ 4th Installments) -->
             <div class="form-group">
-                <label for="partialPaidAmount">Partial Paid Amount (部分付款金額)</label>
-                <input type="number" id="partialPaidAmount" value="0" min="0" placeholder="部分付款金額" oninput="autoUpdatePaidStatus()">
+                <label for="inst1">1st Installment (第 1 期款)</label>
+                <input type="number" id="inst1" value="0" min="0" placeholder="第 1 期款" oninput="autoUpdatePaidStatus()">
+            </div>
+
+            <div class="form-group">
+                <label for="inst2">2nd Installment (第 2 期款)</label>
+                <input type="number" id="inst2" value="0" min="0" placeholder="第 2 期款" oninput="autoUpdatePaidStatus()">
+            </div>
+
+            <div class="form-group">
+                <label for="inst3">3rd Installment (第 3 期款)</label>
+                <input type="number" id="inst3" value="0" min="0" placeholder="第 3 期款" oninput="autoUpdatePaidStatus()">
+            </div>
+
+            <div class="form-group">
+                <label for="inst4">4th Installment (第 4 期款)</label>
+                <input type="number" id="inst4" value="0" min="0" placeholder="第 4 期款" oninput="autoUpdatePaidStatus()">
             </div>
 
             <div class="form-group">
@@ -191,7 +207,11 @@
                     <th>Category</th>
                     <th>Description</th>
                     <th>Total Amount</th>
-                    <th>Partial Paid</th>
+                    <th>1st Inst</th>
+                    <th>2nd Inst</th>
+                    <th>3rd Inst</th>
+                    <th>4th Inst</th>
+                    <th>Total Paid</th>
                     <th>Paid Status</th>
                     <th>AR Warning (應收亮燈)</th>
                     <th>Project Status</th>
@@ -200,7 +220,7 @@
                 </tr>
             </thead>
             <tbody id="records">
-                <tr><td colspan="16" style="text-align:center;">Loading data...</td></tr>
+                <tr><td colspan="20" style="text-align:center;">Loading data...</td></tr>
             </tbody>
         </table>
     </section>
