@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwz1miLmzidcudzOJDXqhquZs69EoJfBLX5M_IZFU4uLrHp9ATCv4l_SRYOl4p_H6LI1g/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyGY3QdUGLzoz_xZ_CZSJWxcf33fShuqyL6HOsHfHEwxE-93WG10QGIADLUzluu1KS9EA/exec";
 
 let recordData = [];
 
@@ -31,7 +31,7 @@ function renderTable() {
   tbody.innerHTML = "";
 
   if (!recordData || recordData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">No records found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;">No records found.</td></tr>';
     return;
   }
 
@@ -43,7 +43,9 @@ function renderTable() {
 
     tr.innerHTML = `
       <td>${row.date || ''}</td>
+      <td>${row.statusText || ''}</td>
       <td>${row.customer || ''}</td>
+      <td>${row.site || ''}</td>
       <td>${row.prNo || ''}</td>
       <td>${row.poNo || ''}</td>
       <td>${row.invoiceNo || ''}</td>
@@ -64,19 +66,17 @@ function renderTable() {
   });
 }
 
-// 提煉年份的萬用解析函式（直接切前 4 位數字，避開所有時區與格式問題）
+// 解析年份
 function getYearFromRecord(dateVal) {
   if (!dateVal) return new Date().getFullYear();
   const str = String(dateVal).trim();
   const match = str.match(/^(\d{4})/);
-  if (match) {
-    return Number(match[1]);
-  }
+  if (match) return Number(match[1]);
   const y = new Date(str).getFullYear();
   return isNaN(y) ? new Date().getFullYear() : y;
 }
 
-// 動態建立年份下拉選單
+// 動態建立年份選單
 function setupYearFilter() {
   const yearSelect = document.getElementById("yearFilter");
   if (!yearSelect) return;
@@ -104,7 +104,7 @@ function setupYearFilter() {
   yearSelect.value = sortedYears[0];
 }
 
-// 渲染「每年各客戶收入統計表」
+// 渲染年度統計表
 function renderAnnualSummary() {
   const tbody = document.getElementById("annualSummary");
   const yearSelect = document.getElementById("yearFilter");
@@ -153,50 +153,16 @@ function renderAnnualSummary() {
   });
 }
 
-// 匯出 Excel 功能
-function exportToExcel() {
-  if (!recordData || recordData.length === 0) {
-    alert("目前沒有可匯出的紀錄！");
-    return;
-  }
-
-  if (typeof XLSX === "undefined") {
-    alert("Excel 元件加載中，請重新整理頁面後再試！");
-    return;
-  }
-
-  const exportList = recordData.map(item => ({
-    "Date (日期)": item.date || "",
-    "Customer (客戶)": item.customer || "",
-    "PR No (請購單號)": item.prNo || "",
-    "PO No (採購單號)": item.poNo || "",
-    "Invoice No (發票號碼)": item.invoiceNo || "",
-    "Category (類別)": item.category || "",
-    "Description (項目說明)": item.description || "",
-    "Qty (數量)": item.qty || 1,
-    "Unit Price (單價)": item.unitPrice || 0,
-    "Total Amount (總金額)": (Number(item.qty || 0) * Number(item.unitPrice || 0)),
-    "Paid Status (付款狀態)": item.paidStatus || "Pending",
-    "Project Status (專案狀態)": item.status || "Open",
-    "Owner (負責人)": item.owner || ""
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(exportList);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Revenue & AR");
-
-  const fileName = `PTW_Revenue_Tracker_${new Date().toISOString().slice(0, 10)}.xlsx`;
-  XLSX.writeFile(workbook, fileName);
-}
-
-// 點擊 Edit 帶入舊資料
+// 點擊 Edit 帶入舊資料進行修改
 function editRecord(id) {
-  const target = recordData.find(item => String(item.id) === String(id));
+  const target = recordData.find(item => String(item.id).trim() === String(id).trim());
   if (!target) return;
 
   document.getElementById("recordId").value = target.id || "";
   document.getElementById("date").value = target.date || "";
+  document.getElementById("statusText").value = target.statusText || "";
   document.getElementById("customer").value = target.customer || "";
+  document.getElementById("site").value = target.site || "";
   document.getElementById("prNo").value = target.prNo || "";
   document.getElementById("poNo").value = target.poNo || "";
   document.getElementById("invoiceNo").value = target.invoiceNo || "";
@@ -220,7 +186,9 @@ function editRecord(id) {
 function resetForm() {
   document.getElementById("recordId").value = "";
   document.getElementById("date").valueAsDate = new Date();
+  document.getElementById("statusText").value = "";
   document.getElementById("customer").value = "";
+  document.getElementById("site").value = "";
   document.getElementById("prNo").value = "";
   document.getElementById("poNo").value = "";
   document.getElementById("invoiceNo").value = "";
@@ -253,7 +221,9 @@ async function saveRecord() {
     action: recordId ? "update" : "create",
     id: recordId,
     date: document.getElementById("date").value,
+    statusText: document.getElementById("statusText").value,
     customer: customerVal,
+    site: document.getElementById("site").value,
     prNo: document.getElementById("prNo").value,
     poNo: document.getElementById("poNo").value,
     invoiceNo: document.getElementById("invoiceNo").value,
@@ -299,6 +269,44 @@ async function deleteRecord(id) {
     console.error("Error deleting record:", error);
     alert("刪除失敗！");
   }
+}
+
+// 匯出 Excel 功能
+function exportToExcel() {
+  if (!recordData || recordData.length === 0) {
+    alert("目前沒有可匯出的紀錄！");
+    return;
+  }
+
+  if (typeof XLSX === "undefined") {
+    alert("Excel 元件加載中，請重新整理頁面後再試！");
+    return;
+  }
+
+  const exportList = recordData.map(item => ({
+    "Date (日期)": item.date || "",
+    "Status (進度狀態)": item.statusText || "",
+    "Customer (客戶)": item.customer || "",
+    "Site/Fab (廠別)": item.site || "",
+    "PR No (請購單號)": item.prNo || "",
+    "PO No (採購單號)": item.poNo || "",
+    "Invoice No (發票號碼)": item.invoiceNo || "",
+    "Category (類別)": item.category || "",
+    "Description (項目說明)": item.description || "",
+    "Qty (數量)": item.qty || 1,
+    "Unit Price (單價)": item.unitPrice || 0,
+    "Total Amount (總金額)": (Number(item.qty || 0) * Number(item.unitPrice || 0)),
+    "Paid Status (付款狀態)": item.paidStatus || "Pending",
+    "Project Status (專案狀態)": item.status || "Open",
+    "Owner (負責人)": item.owner || ""
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportList);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Revenue & AR");
+
+  const fileName = `PTW_Revenue_Tracker_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
 }
 
 // 更新頂部 Dashboard KPI

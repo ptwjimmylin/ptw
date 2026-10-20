@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PTW Revenue & AR Tracker</title>
     <link rel="stylesheet" href="style.css">
-    <!-- 引入 SheetJS 函式庫用於匯出 Excel (.xlsx) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -35,7 +34,6 @@
             <div>
                 <label for="yearFilter" style="font-weight: bold; font-size: 14px;">Select Year: </label>
                 <select id="yearFilter" onchange="renderAnnualSummary()" style="width: auto; display: inline-block; padding: 5px 10px;">
-                    <!-- 自動動態填入年份 -->
                 </select>
             </div>
         </div>
@@ -63,6 +61,12 @@
                 <input type="date" id="date">
             </div>
 
+            <!-- 新增：Status 進度狀態 -->
+            <div class="form-group">
+                <label for="statusText">Status (進度狀態)</label>
+                <input type="text" id="statusText" placeholder="填寫進度狀態">
+            </div>
+
             <div class="form-group">
                 <label for="customer">Customer (客戶)</label>
                 <select id="customer">
@@ -80,6 +84,12 @@
                     <option>PTI</option>
                     <option>KYEC</option>
                 </select>
+            </div>
+
+            <!-- 新增：Site/Fab 廠別 -->
+            <div class="form-group">
+                <label for="site">Site/Fab (廠別)</label>
+                <input type="text" id="site" placeholder="如 F12 / Fab18">
             </div>
 
             <div class="form-group">
@@ -109,6 +119,7 @@
                     <option>Install</option>
                     <option>Training</option>
                     <option>Upgrade</option>
+                    <option>Credit</option> <!-- 新增：Credit -->
                 </select>
             </div>
 
@@ -157,12 +168,11 @@
             </div>
         </div>
 
-        <div class="form-actions" style="justify-content: space-between;">
+        <div class="form-actions" style="display: flex; justify-content: space-between;">
             <div>
                 <button type="button" id="submitBtn" onclick="saveRecord()">Save Record</button>
                 <button type="button" id="cancelBtn" onclick="resetForm()" style="display: none;">Cancel</button>
             </div>
-            <!-- 匯出 Excel 按鈕 -->
             <button type="button" onclick="exportToExcel()" style="background-color: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 15px;">📊 Export Excel</button>
         </div>
     </section>
@@ -173,7 +183,9 @@
             <thead>
                 <tr>
                     <th>Date</th>
+                    <th>Status (進度)</th>
                     <th>Customer</th>
+                    <th>Site (廠別)</th>
                     <th>PR No</th>
                     <th>PO No</th>
                     <th>Invoice No</th>
@@ -181,13 +193,13 @@
                     <th>Description</th>
                     <th>Total Amount</th>
                     <th>Paid Status</th>
-                    <th>Status</th>
+                    <th>Project Status</th>
                     <th>Owner</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody id="records">
-                <tr><td colspan="12" style="text-align:center;">Loading data...</td></tr>
+                <tr><td colspan="14" style="text-align:center;">Loading data...</td></tr>
             </tbody>
         </table>
     </section>
