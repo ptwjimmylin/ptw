@@ -64,6 +64,20 @@ function renderTable() {
   });
 }
 
+// 通用年份解析函式（解決各瀏覽器日期解析相容問題）
+function parseYearFromDate(dateStr) {
+  if (!dateStr) return null;
+  const str = String(dateStr).trim();
+  // 先嘗試正規表示式匹配 yyyy-mm-dd
+  const match = str.match(/^(\d{4})/);
+  if (match) {
+    return Number(match[1]);
+  }
+  const d = new Date(str);
+  const y = d.getFullYear();
+  return isNaN(y) ? null : y;
+}
+
 // 動態建立年份下拉選單
 function setupYearFilter() {
   const yearSelect = document.getElementById("yearFilter");
@@ -75,10 +89,8 @@ function setupYearFilter() {
   years.add(currentYear);
 
   recordData.forEach(row => {
-    if (row.date) {
-      const year = new Date(row.date).getFullYear();
-      if (!isNaN(year)) years.add(year);
-    }
+    const year = parseYearFromDate(row.date);
+    if (year) years.add(year);
   });
 
   const sortedYears = Array.from(years).sort((a, b) => b - a);
@@ -92,6 +104,8 @@ function setupYearFilter() {
 
   if (currentSelected && sortedYears.includes(Number(currentSelected))) {
     yearSelect.value = currentSelected;
+  } else if (sortedYears.length > 0) {
+    yearSelect.value = sortedYears[0];
   }
 }
 
@@ -104,12 +118,10 @@ function renderAnnualSummary() {
   const selectedYear = Number(yearSelect.value);
   tbody.innerHTML = "";
 
-  // 整理選定年份各客戶的統計數據
   const customerStats = {};
 
   recordData.forEach(row => {
-    if (!row.date) return;
-    const rowYear = new Date(row.date).getFullYear();
+    const rowYear = parseYearFromDate(row.date);
     if (rowYear !== selectedYear) return;
 
     const customer = row.customer || "Unassigned";
@@ -146,14 +158,18 @@ function renderAnnualSummary() {
   });
 }
 
-// 匯出功能：生成真正的 Excel .xlsx 檔案
+// 匯出 Excel 功能
 function exportToExcel() {
   if (!recordData || recordData.length === 0) {
     alert("目前沒有可匯出的紀錄！");
     return;
   }
 
-  // 格式化輸出欄位
+  if (typeof XLSX === "undefined") {
+    alert("Excel 匯出元件載入中，請稍後再試或重新整理頁面！");
+    return;
+  }
+
   const exportList = recordData.map(item => ({
     "Date (日期)": item.date || "",
     "Customer (客戶)": item.customer || "",
@@ -170,12 +186,10 @@ function exportToExcel() {
     "Owner (負責人)": item.owner || ""
   }));
 
-  // 使用 SheetJS 產生活頁簿
   const worksheet = XLSX.utils.json_to_sheet(exportList);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Revenue & AR");
 
-  // 下載 xlsx
   const fileName = `PTW_Revenue_Tracker_${new Date().toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }
