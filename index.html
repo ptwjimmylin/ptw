@@ -27,7 +27,7 @@
         </div>
     </section>
 
-    <!-- 每年各客戶收入統計表 -->
+    <!-- 每年各客戶收入統計表 (附帶上下拉動捲動條 Scrollbar) -->
     <section class="table-container" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2>Annual Revenue by Customer (年度客戶收入統計)</h2>
@@ -37,19 +37,21 @@
                 </select>
             </div>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Customer (客戶)</th>
-                    <th>Paid Revenue (已收收入)</th>
-                    <th>Pending AR (未收應收)</th>
-                    <th>Total Contract Amount (總合約金額)</th>
-                </tr>
-            </thead>
-            <tbody id="annualSummary">
-                <tr><td colspan="4" style="text-align:center;">Loading summary...</td></tr>
-            </tbody>
-        </table>
+        <div style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 1;">
+                    <tr>
+                        <th>Customer (客戶)</th>
+                        <th>Paid Revenue (已收收入)</th>
+                        <th>Pending AR (未收應收)</th>
+                        <th>Total Contract Amount (總合約金額)</th>
+                    </tr>
+                </thead>
+                <tbody id="annualSummary">
+                    <tr><td colspan="4" style="text-align:center;">Loading summary...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </section>
 
     <section class="form">
@@ -105,12 +107,12 @@
                 <input type="text" id="invoiceNo" placeholder="Invoice No">
             </div>
 
+            <!-- 移除 Labor，保留 Service Labor 與 Credit -->
             <div class="form-group">
                 <label for="category">Category (類別)</label>
                 <select id="category">
                     <option value="">Select Category</option>
                     <option>Project</option>
-                    <option>Labor</option>
                     <option>Service Labor</option>
                     <option>Parts</option>
                     <option>Repair</option>
@@ -136,10 +138,10 @@
                 <input type="number" id="unitPrice" value="0" min="0" placeholder="Unit Price">
             </div>
 
-            <!-- 新增：已部分付款金額 -->
+            <!-- 部分付款金額輸入框（具備即時自動連動選單事件） -->
             <div class="form-group">
                 <label for="partialPaidAmount">Partial Paid Amount (部分付款金額)</label>
-                <input type="number" id="partialPaidAmount" value="0" min="0" placeholder="部分付款金額">
+                <input type="number" id="partialPaidAmount" value="0" min="0" placeholder="部分付款金額" oninput="autoUpdatePaidStatus()">
             </div>
 
             <div class="form-group">
