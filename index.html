@@ -61,7 +61,6 @@
                 <input type="date" id="date">
             </div>
 
-            <!-- 新增：Status 進度狀態 -->
             <div class="form-group">
                 <label for="statusText">Status (進度狀態)</label>
                 <input type="text" id="statusText" placeholder="填寫進度狀態">
@@ -86,7 +85,6 @@
                 </select>
             </div>
 
-            <!-- 新增：Site/Fab 廠別 -->
             <div class="form-group">
                 <label for="site">Site/Fab (廠別)</label>
                 <input type="text" id="site" placeholder="如 F12 / Fab18">
@@ -119,7 +117,7 @@
                     <option>Install</option>
                     <option>Training</option>
                     <option>Upgrade</option>
-                    <option>Credit</option> <!-- 新增：Credit -->
+                    <option>Credit</option>
                 </select>
             </div>
 
@@ -157,14 +155,10 @@
                 </select>
             </div>
 
+            <!-- Owner 改為可自由填寫文字輸入框 -->
             <div class="form-group">
                 <label for="owner">Owner (負責人)</label>
-                <select id="owner">
-                    <option value="">Select Owner</option>
-                    <option>Jimmy</option>
-                    <option>Jason</option>
-                    <option>Steven</option>
-                </select>
+                <input type="text" id="owner" placeholder="填寫負責人姓名">
             </div>
         </div>
 

@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyGY3QdUGLzoz_xZ_CZSJWxcf33fShuqyL6HOsHfHEwxE-93WG10QGIADLUzluu1KS9EA/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz0UIO0UegK13ZhHcWqbmgf_UvtaoRcgfBvgPexbF6l-kEvjiQmLOaZGL4V143NTEQlxQ/exec";
 
 let recordData = [];
 
@@ -104,7 +104,7 @@ function setupYearFilter() {
   yearSelect.value = sortedYears[0];
 }
 
-// 渲染年度統計表
+// 渲染年度客戶收入統計
 function renderAnnualSummary() {
   const tbody = document.getElementById("annualSummary");
   const yearSelect = document.getElementById("yearFilter");
@@ -153,7 +153,7 @@ function renderAnnualSummary() {
   });
 }
 
-// 點擊 Edit 帶入舊資料進行修改
+// 點擊 Edit 帶入舊資料
 function editRecord(id) {
   const target = recordData.find(item => String(item.id).trim() === String(id).trim());
   if (!target) return;
@@ -237,7 +237,7 @@ async function saveRecord() {
   };
 
   submitBtn.disabled = true;
-  submitBtn.innerText = "Saving...";
+  submitBtn.innerText = recordId ? "Updating..." : "Saving...";
 
   try {
     await fetch(GAS_API_URL, {
@@ -249,7 +249,7 @@ async function saveRecord() {
     await fetchRecords();
   } catch (error) {
     console.error("Error saving record:", error);
-    alert("儲存失敗！");
+    alert("儲存失敗，請重試！");
   } finally {
     submitBtn.disabled = false;
   }
@@ -271,7 +271,7 @@ async function deleteRecord(id) {
   }
 }
 
-// 匯出 Excel 功能
+// 匯出 Excel
 function exportToExcel() {
   if (!recordData || recordData.length === 0) {
     alert("目前沒有可匯出的紀錄！");
@@ -279,7 +279,7 @@ function exportToExcel() {
   }
 
   if (typeof XLSX === "undefined") {
-    alert("Excel 元件加載中，請重新整理頁面後再試！");
+    alert("Excel 元件載入中，請重新整理頁面後再試！");
     return;
   }
 
