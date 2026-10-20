@@ -27,7 +27,7 @@
         </div>
     </section>
 
-    <!-- 每年各客戶收入統計表 (附帶上下拉動捲動條 Scrollbar) -->
+    <!-- 每年各客戶收入統計表 (附帶動態上下滑動條 Scrollbar) -->
     <section class="table-container" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2>Annual Revenue by Customer (年度客戶收入統計)</h2>
@@ -107,7 +107,6 @@
                 <input type="text" id="invoiceNo" placeholder="Invoice No">
             </div>
 
-            <!-- 移除 Labor，保留 Service Labor 與 Credit -->
             <div class="form-group">
                 <label for="category">Category (類別)</label>
                 <select id="category">
@@ -130,15 +129,14 @@
 
             <div class="form-group">
                 <label for="qty">Qty (數量)</label>
-                <input type="number" id="qty" value="1" min="1" placeholder="Qty">
+                <input type="number" id="qty" value="1" min="1" placeholder="Qty" oninput="autoUpdatePaidStatus()">
             </div>
 
             <div class="form-group">
                 <label for="unitPrice">Unit Price (單價)</label>
-                <input type="number" id="unitPrice" value="0" min="0" placeholder="Unit Price">
+                <input type="number" id="unitPrice" value="0" min="0" placeholder="Unit Price" oninput="autoUpdatePaidStatus()">
             </div>
 
-            <!-- 部分付款金額輸入框（具備即時自動連動選單事件） -->
             <div class="form-group">
                 <label for="partialPaidAmount">Partial Paid Amount (部分付款金額)</label>
                 <input type="number" id="partialPaidAmount" value="0" min="0" placeholder="部分付款金額" oninput="autoUpdatePaidStatus()">
