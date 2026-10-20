@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyjSKPdAXZIr2Ec9qNhplMn_JxeTqeTscsxINEleWtMhAtiv0PeVouHkMGrivfIOPM5Kg/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwGt8haW2-v1Au7sjkROJaS7pgOzShcCVx2nN3oQFsWxIZ7WkKnx5lTEBw4D085N5UcjA/exec";
 
 let recordData = [];
 
@@ -10,7 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchRecords();
 });
 
-// 計算 4 期付款累積總額
 function getSumInstallmentsFromForm() {
   const i1 = Number(document.getElementById("inst1")?.value || 0);
   const i2 = Number(document.getElementById("inst2")?.value || 0);
@@ -19,7 +18,6 @@ function getSumInstallmentsFromForm() {
   return i1 + i2 + i3 + i4;
 }
 
-// 自動連動：根據各期累加金額與 Total Amount 自動切換 Paid Status
 function autoUpdatePaidStatus() {
   const qty = Number(document.getElementById("qty")?.value || 1);
   const unitPrice = Number(document.getElementById("unitPrice")?.value || 0);
@@ -39,7 +37,6 @@ function autoUpdatePaidStatus() {
   }
 }
 
-// 撈取 Google Sheets 所有紀錄
 async function fetchRecords() {
   try {
     const response = await fetch(GAS_API_URL);
@@ -60,7 +57,6 @@ async function fetchRecords() {
   }
 }
 
-// 計算累加已付與 AR 亮燈狀態
 function getRecordPaidAndAR(row, totalAmount) {
   const i1 = Number(row.inst1 !== undefined ? row.inst1 : (row.partialPaidAmount || 0));
   const i2 = Number(row.inst2 || 0);
@@ -88,7 +84,6 @@ function getRecordPaidAndAR(row, totalAmount) {
   return { i1, i2, i3, i4, sumPaid, displayPaidStatus, arHtml };
 }
 
-// 渲染明細表格
 function renderTable() {
   const tbody = document.getElementById("records");
   if (!tbody) return;
@@ -138,7 +133,6 @@ function renderTable() {
   });
 }
 
-// 解析年份
 function getYearFromRecord(dateVal) {
   if (!dateVal) return new Date().getFullYear();
   const str = String(dateVal).trim();
@@ -148,7 +142,6 @@ function getYearFromRecord(dateVal) {
   return isNaN(y) ? new Date().getFullYear() : y;
 }
 
-// 動態建立年份選單
 function setupYearFilter() {
   const yearSelect = document.getElementById("yearFilter");
   if (!yearSelect) return;
@@ -176,7 +169,6 @@ function setupYearFilter() {
   yearSelect.value = sortedYears[0];
 }
 
-// 渲染年度客戶收入統計
 function renderAnnualSummary() {
   const tbody = document.getElementById("annualSummary");
   const yearSelect = document.getElementById("yearFilter");
@@ -230,7 +222,6 @@ function renderAnnualSummary() {
   });
 }
 
-// 點擊 Edit 帶入舊資料
 function editRecord(id) {
   const target = recordData.find(item => String(item.id).trim() === String(id).trim());
   if (!target) return;
@@ -268,7 +259,6 @@ function editRecord(id) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 重置表單
 function resetForm() {
   document.getElementById("recordId").value = "";
   document.getElementById("date").valueAsDate = new Date();
@@ -296,7 +286,6 @@ function resetForm() {
   if (cancelBtn) cancelBtn.style.display = "none";
 }
 
-// 新增或更新資料
 async function saveRecord() {
   const submitBtn = document.getElementById("submitBtn");
   const recordId = document.getElementById("recordId").value;
@@ -354,6 +343,9 @@ async function saveRecord() {
   try {
     const res = await fetch(GAS_API_URL, {
       method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
       body: JSON.stringify(payload)
     });
 
@@ -365,19 +357,21 @@ async function saveRecord() {
     await fetchRecords();
   } catch (error) {
     console.error("Error saving record:", error);
-    alert("儲存失敗，請檢查 API 網址與連線！");
+    alert("儲存失敗，請檢查 API 網址與 Apps Script 權限！");
   } finally {
     submitBtn.disabled = false;
   }
 }
 
-// 刪除紀錄
 async function deleteRecord(id) {
   if (!confirm("Are you sure you want to delete this record?")) return;
 
   try {
     await fetch(GAS_API_URL, {
       method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
       body: JSON.stringify({ action: "delete", id: id })
     });
     await fetchRecords();
@@ -387,7 +381,6 @@ async function deleteRecord(id) {
   }
 }
 
-// 匯出 Excel
 function exportToExcel() {
   if (!recordData || recordData.length === 0) {
     alert("目前沒有可匯出的紀錄！");
@@ -436,7 +429,6 @@ function exportToExcel() {
   XLSX.writeFile(workbook, fileName);
 }
 
-// 更新頂部 Dashboard KPI
 function updateDashboard() {
   let totalRevenue = 0;
   let pendingAR = 0;
