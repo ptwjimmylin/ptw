@@ -9,8 +9,13 @@
 </head>
 <body>
     <header>
-        <h1>PTW Revenue & AR Tracker (USD)</h1>
-        <span style="font-size: 13px; color: #64748b;">All amounts in USD ($)</span>
+        <div>
+            <h1>PTW Revenue & AR Tracker (USD)</h1>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button type="button" class="btn-primary" onclick="openAddModal()">➕ Add Record (新增紀錄)</button>
+            <button type="button" class="btn-export" onclick="exportToExcel()">📊 Export Excel</button>
+        </div>
     </header>
 
     <!-- 可點擊互動 Dashboard 卡片 -->
@@ -34,15 +39,15 @@
 
     <!-- 每年各客戶收入統計表 -->
     <section class="table-container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2>Annual Revenue by Customer (年度客戶收入統計 - USD)</h2>
             <div>
-                <label for="yearFilter" style="font-weight: 600; font-size: 13.5px;">Select Year: </label>
-                <select id="yearFilter" onchange="renderAnnualSummary()" style="width: auto; display: inline-block; padding: 6px 12px;">
+                <label for="yearFilter" style="font-weight: 600; font-size: 13.5px; color: #1e3a8a;">Select Year: </label>
+                <select id="yearFilter" onchange="renderAnnualSummary()" style="width: auto; display: inline-block; padding: 6px 12px; border: 1px solid #93c5fd; border-radius: 6px;">
                 </select>
             </div>
         </div>
-        <div style="max-height: 240px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;">
             <table>
                 <thead>
                     <tr>
@@ -59,150 +64,14 @@
         </div>
     </section>
 
-    <!-- 新增 / 編輯表單 -->
-    <section class="form">
-        <h2 style="margin-bottom: 15px;">Add / Edit Record (新增或編輯紀錄)</h2>
-        <input type="hidden" id="recordId" value="">
-
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="date">Date (日期)</label>
-                <input type="date" id="date">
-            </div>
-
-            <div class="form-group">
-                <label for="statusText">Status (進度說明)</label>
-                <input type="text" id="statusText" placeholder="填寫進度狀態">
-            </div>
-
-            <div class="form-group">
-                <label for="customer">Customer (客戶)</label>
-                <select id="customer">
-                    <option value="">Select Customer</option>
-                    <option>TSMC</option>
-                    <option>UMC</option>
-                    <option>Micron</option>
-                    <option>Nanya</option>
-                    <option>VIS</option>
-                    <option>PSMC</option>
-                    <option>Winbond</option>
-                    <option>Macronix</option>
-                    <option>ASE</option>
-                    <option>SPIL</option>
-                    <option>PTI</option>
-                    <option>KYEC</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="site">Site/Fab (廠別)</label>
-                <input type="text" id="site" placeholder="如 F12 / Fab18">
-            </div>
-
-            <div class="form-group">
-                <label for="prNo">PR No (請購單號)</label>
-                <input type="text" id="prNo" placeholder="PR No">
-            </div>
-
-            <div class="form-group">
-                <label for="poNo">PO No (採購單號)</label>
-                <input type="text" id="poNo" placeholder="PO No">
-            </div>
-
-            <div class="form-group">
-                <label for="invoiceNo">Invoice No (發票號碼)</label>
-                <input type="text" id="invoiceNo" placeholder="Invoice No">
-            </div>
-
-            <div class="form-group">
-                <label for="category">Category (類別)</label>
-                <select id="category">
-                    <option value="">Select Category</option>
-                    <option>Project</option>
-                    <option>Service Labor</option>
-                    <option>Parts</option>
-                    <option>Repair</option>
-                    <option>Install</option>
-                    <option>Training</option>
-                    <option>Upgrade</option>
-                    <option>Credit</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="description">Description (項目說明)</label>
-                <input type="text" id="description" placeholder="Description">
-            </div>
-
-            <div class="form-group">
-                <label for="qty">Qty (數量)</label>
-                <input type="number" id="qty" value="1" min="1" placeholder="Qty" oninput="autoUpdatePaidStatus()">
-            </div>
-
-            <div class="form-group">
-                <label for="unitPrice">Unit Price (美金單價 USD)</label>
-                <input type="number" id="unitPrice" value="0" min="0" step="0.01" placeholder="Unit Price" oninput="autoUpdatePaidStatus()">
-            </div>
-
-            <div class="form-group">
-                <label for="inst1">1st Installment (第 1 期 USD)</label>
-                <input type="number" id="inst1" value="0" min="0" step="0.01" placeholder="第 1 期款" oninput="autoUpdatePaidStatus()">
-            </div>
-
-            <div class="form-group">
-                <label for="inst2">2nd Installment (第 2 期 USD)</label>
-                <input type="number" id="inst2" value="0" min="0" step="0.01" placeholder="第 2 期款" oninput="autoUpdatePaidStatus()">
-            </div>
-
-            <div class="form-group">
-                <label for="inst3">3rd Installment (第 3 期 USD)</label>
-                <input type="number" id="inst3" value="0" min="0" step="0.01" placeholder="第 3 期款" oninput="autoUpdatePaidStatus()">
-            </div>
-
-            <div class="form-group">
-                <label for="inst4">4th Installment (第 4 期 USD)</label>
-                <input type="number" id="inst4" value="0" min="0" step="0.01" placeholder="第 4 期款" oninput="autoUpdatePaidStatus()">
-            </div>
-
-            <div class="form-group">
-                <label for="paidStatus">Paid Status (付款狀態)</label>
-                <select id="paidStatus">
-                    <option value="Pending" selected>Pending</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Partial">Partial</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="status">Project Status (專案狀態)</label>
-                <select id="status">
-                    <option value="Open">Open</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Closed">Closed</option>
-                    <option value="Cancelled">Cancelled</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="owner">Owner (負責人)</label>
-                <input type="text" id="owner" placeholder="填寫負責人姓名">
-            </div>
-        </div>
-
-        <div class="form-actions" style="display: flex; justify-content: space-between;">
-            <div style="display: flex; gap: 10px;">
-                <button type="button" id="submitBtn" class="btn-primary" onclick="saveRecord()">Save Record</button>
-                <button type="button" id="cancelBtn" class="btn-secondary" onclick="resetForm()" style="display: none;">Cancel</button>
-            </div>
-            <button type="button" class="btn-export" onclick="exportToExcel()">📊 Export Excel</button>
-        </div>
-    </section>
-
-    <!-- 明細紀錄與搜尋列 -->
+    <!-- 明細紀錄與搜尋列（可視空間最大化） -->
     <section class="table-container">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>Detailed Records (明細紀錄 - USD)</h2>
-            <span id="recordCountBadge" class="badge badge-neutral">0 筆紀錄</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <h2>Detailed Records (明細紀錄 - USD)</h2>
+                <span id="recordCountBadge" class="badge badge-neutral">0 筆紀錄</span>
+            </div>
+            <button type="button" class="btn-primary" style="padding: 7px 14px; font-size: 13px;" onclick="openAddModal()">➕ Add Record</button>
         </div>
 
         <!-- 搜尋與篩選控制列 -->
@@ -252,6 +121,148 @@
             </table>
         </div>
     </section>
+
+    <!-- 新增 / 編輯 彈出視窗 (Modal) -->
+    <div id="recordModal" class="modal-overlay" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="modalTitle">➕ Add New Record (新增紀錄)</h2>
+                <button type="button" class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+
+            <input type="hidden" id="recordId" value="">
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="date">Date (日期)</label>
+                    <input type="date" id="date">
+                </div>
+
+                <div class="form-group">
+                    <label for="statusText">Status (進度說明)</label>
+                    <input type="text" id="statusText" placeholder="填寫進度狀態">
+                </div>
+
+                <div class="form-group">
+                    <label for="customer">Customer (客戶) *</label>
+                    <select id="customer">
+                        <option value="">Select Customer</option>
+                        <option>TSMC</option>
+                        <option>UMC</option>
+                        <option>Micron</option>
+                        <option>Nanya</option>
+                        <option>VIS</option>
+                        <option>PSMC</option>
+                        <option>Winbond</option>
+                        <option>Macronix</option>
+                        <option>ASE</option>
+                        <option>SPIL</option>
+                        <option>PTI</option>
+                        <option>KYEC</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="site">Site/Fab (廠別)</label>
+                    <input type="text" id="site" placeholder="如 F12 / Fab18">
+                </div>
+
+                <div class="form-group">
+                    <label for="prNo">PR No (請購單號)</label>
+                    <input type="text" id="prNo" placeholder="PR No">
+                </div>
+
+                <div class="form-group">
+                    <label for="poNo">PO No (採購單號)</label>
+                    <input type="text" id="poNo" placeholder="PO No">
+                </div>
+
+                <div class="form-group">
+                    <label for="invoiceNo">Invoice No (發票號碼)</label>
+                    <input type="text" id="invoiceNo" placeholder="Invoice No">
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category (類別)</label>
+                    <select id="category">
+                        <option value="">Select Category</option>
+                        <option>Project</option>
+                        <option>Service Labor</option>
+                        <option>Parts</option>
+                        <option>Repair</option>
+                        <option>Install</option>
+                        <option>Training</option>
+                        <option>Upgrade</option>
+                        <option>Credit</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description (項目說明)</label>
+                    <input type="text" id="description" placeholder="Description">
+                </div>
+
+                <div class="form-group">
+                    <label for="qty">Qty (數量)</label>
+                    <input type="number" id="qty" value="1" min="1" placeholder="Qty" oninput="autoUpdatePaidStatus()">
+                </div>
+
+                <div class="form-group">
+                    <label for="unitPrice">Unit Price (美金單價 USD)</label>
+                    <input type="number" id="unitPrice" value="0" min="0" step="0.01" placeholder="Unit Price" oninput="autoUpdatePaidStatus()">
+                </div>
+
+                <div class="form-group">
+                    <label for="inst1">1st Installment (第 1 期 USD)</label>
+                    <input type="number" id="inst1" value="0" min="0" step="0.01" placeholder="第 1 期款" oninput="autoUpdatePaidStatus()">
+                </div>
+
+                <div class="form-group">
+                    <label for="inst2">2nd Installment (第 2 期 USD)</label>
+                    <input type="number" id="inst2" value="0" min="0" step="0.01" placeholder="第 2 期款" oninput="autoUpdatePaidStatus()">
+                </div>
+
+                <div class="form-group">
+                    <label for="inst3">3rd Installment (第 3 期 USD)</label>
+                    <input type="number" id="inst3" value="0" min="0" step="0.01" placeholder="第 3 期款" oninput="autoUpdatePaidStatus()">
+                </div>
+
+                <div class="form-group">
+                    <label for="inst4">4th Installment (第 4 期 USD)</label>
+                    <input type="number" id="inst4" value="0" min="0" step="0.01" placeholder="第 4 期款" oninput="autoUpdatePaidStatus()">
+                </div>
+
+                <div class="form-group">
+                    <label for="paidStatus">Paid Status (付款狀態)</label>
+                    <select id="paidStatus">
+                        <option value="Pending" selected>Pending</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Partial">Partial</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Project Status (專案狀態)</label>
+                    <select id="status">
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Closed">Closed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="owner">Owner (負責人)</label>
+                    <input type="text" id="owner" placeholder="填寫負責人姓名">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal()">Cancel (取消)</button>
+                <button type="button" id="submitBtn" class="btn-primary" onclick="saveRecord()">Save Record (儲存)</button>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>
