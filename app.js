@@ -1,6 +1,7 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwGt8haW2-v1Au7sjkROJaS7pgOzShcCVx2nN3oQFsWxIZ7WkKnx5lTEBw4D085N5UcjA/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwz1mIlmzidcudz0JDXqhquZs69EoJfBLX5M_IZFU4uLrHp9ATCv4l_SRYo14p_H6LI1g/exec";
 
 let recordData = [];
+let activeCardFilter = null; // 'revenue' | 'pending' | 'projects' | null
 
 document.addEventListener("DOMContentLoaded", () => {
   const dateInput = document.getElementById("date");
@@ -10,6 +11,12 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchRecords();
 });
 
+// 格式化美金顯示
+function formatUSD(amount) {
+  return "$" + Number(amount || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+// 計算 4 期付款累積總額
 function getSumInstallmentsFromForm() {
   const i1 = Number(document.getElementById("inst1")?.value || 0);
   const i2 = Number(document.getElementById("inst2")?.value || 0);
@@ -18,6 +25,7 @@ function getSumInstallmentsFromForm() {
   return i1 + i2 + i3 + i4;
 }
 
+// 自動連動：根據各期累加金額與 Total Amount 自動切換 Paid Status
 function autoUpdatePaidStatus() {
   const qty = Number(document.getElementById("qty")?.value || 1);
   const unitPrice = Number(document.getElementById("unitPrice")?.value || 0);
@@ -37,16 +45,16 @@ function autoUpdatePaidStatus() {
   }
 }
 
+// 撈取 Google Sheets 所有紀錄
 async function fetchRecords() {
   try {
     const response = await fetch(GAS_API_URL);
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
+    if (!response.ok) throw new Error("Network response was not ok");
     recordData = await response.json();
+    
+    setupFiltersAndDropdowns();
     renderTable();
     updateDashboard();
-    setupYearFilter();
     renderAnnualSummary();
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -57,12 +65,20 @@ async function fetchRecords() {
   }
 }
 
-function getRecordPaidAndAR(row, totalAmount) {
+// 核心商業邏輯：計算已付、Pending AR（排除 Project Status === 'Open' 或 'Cancelled'）與亮燈標籤
+function getRecordFinancials(row) {
+  const qty = Number(row.qty || 0);
+  const unitPrice = Number(row.unitPrice || 0);
+  const totalAmount = qty * unitPrice;
+
   const i1 = Number(row.inst1 !== undefined ? row.inst1 : (row.partialPaidAmount || 0));
   const i2 = Number(row.inst2 || 0);
   const i3 = Number(row.inst3 || 0);
   const i4 = Number(row.inst4 || 0);
   const sumPaid = i1 + i2 + i3 + i4;
+
+  const projectStatus = String(row.status || 'Open').trim();
+  const category = String(row.category || '').trim();
 
   let displayPaidStatus = String(row.paidStatus || 'Pending').trim();
   if (totalAmount > 0 && sumPaid >= totalAmount) {
@@ -71,56 +87,158 @@ function getRecordPaidAndAR(row, totalAmount) {
     displayPaidStatus = "Partial";
   }
 
+  // 計算已收收入
+  let paidRevenue = 0;
+  if (displayPaidStatus === "Paid") {
+    paidRevenue = totalAmount;
+  } else if (displayPaidStatus === "Partial") {
+    paidRevenue = sumPaid;
+  }
+
+  // 計算 Pending AR：Project Status 為 Open 或 Cancelled 時，不計入 Pending AR！
+  const isExcludedFromAR = (projectStatus === "Open" || projectStatus === "Cancelled");
+  let pendingAR = 0;
+  if (!isExcludedFromAR && displayPaidStatus !== "Paid") {
+    pendingAR = Math.max(0, totalAmount - paidRevenue);
+  }
+
+  // Active Projects 判斷
+  const isActiveProject = (category === "Project" || category === "Upgrade") &&
+                          (displayPaidStatus === "Paid" || displayPaidStatus === "Partial");
+
+  // 亮燈標籤 HTML
   let arHtml = "";
   if (displayPaidStatus === "Paid" || (totalAmount > 0 && sumPaid >= totalAmount)) {
     arHtml = `<span class="badge badge-paid">✅ Cleared</span>`;
-  } else if (displayPaidStatus === "Partial" || (sumPaid > 0 && sumPaid < totalAmount)) {
-    const ar = Math.max(0, totalAmount - sumPaid);
-    arHtml = `<span class="badge" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;">⚠️ AR: $${ar.toLocaleString()}</span>`;
+  } else if (projectStatus === "Open") {
+    arHtml = `<span class="badge badge-neutral">⚪ Open (Not in AR)</span>`;
+  } else if (projectStatus === "Cancelled") {
+    arHtml = `<span class="badge badge-neutral">🚫 Cancelled</span>`;
+  } else if (displayPaidStatus === "Partial" || sumPaid > 0) {
+    arHtml = `<span class="badge" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;">⚠️ AR: ${formatUSD(pendingAR)}</span>`;
   } else {
-    arHtml = `<span class="badge" style="background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;">🔴 Unpaid: $${totalAmount.toLocaleString()}</span>`;
+    arHtml = `<span class="badge" style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">🔴 Unpaid: ${formatUSD(pendingAR)}</span>`;
   }
 
-  return { i1, i2, i3, i4, sumPaid, displayPaidStatus, arHtml };
+  return {
+    totalAmount,
+    i1, i2, i3, i4,
+    sumPaid,
+    paidRevenue,
+    pendingAR,
+    displayPaidStatus,
+    projectStatus,
+    isActiveProject,
+    arHtml
+  };
 }
 
+// 點擊 Dashboard 卡片切換篩選
+function toggleDashboardFilter(filterType) {
+  if (activeCardFilter === filterType) {
+    activeCardFilter = null; // 取消篩選
+  } else {
+    activeCardFilter = filterType;
+  }
+
+  // 更新卡片選取外框樣式
+  document.getElementById("card-revenue")?.classList.toggle("active-filter", activeCardFilter === "revenue");
+  document.getElementById("card-pending")?.classList.toggle("active-filter", activeCardFilter === "pending");
+  document.getElementById("card-projects")?.classList.toggle("active-filter", activeCardFilter === "projects");
+
+  renderTable();
+}
+
+// 清除所有篩選條件
+function clearAllFilters() {
+  activeCardFilter = null;
+  document.getElementById("card-revenue")?.classList.remove("active-filter");
+  document.getElementById("card-pending")?.classList.remove("active-filter");
+  document.getElementById("card-projects")?.classList.remove("active-filter");
+
+  const yearSel = document.getElementById("searchYear");
+  const custSel = document.getElementById("searchCustomer");
+  const kwInput = document.getElementById("searchKeyword");
+  if (yearSel) yearSel.value = "ALL";
+  if (custSel) custSel.value = "ALL";
+  if (kwInput) kwInput.value = "";
+
+  renderTable();
+}
+
+// 渲染明細表格（套用年份、客戶、關鍵字與 Dashboard 卡片篩選）
 function renderTable() {
   const tbody = document.getElementById("records");
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  if (!recordData || recordData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;">No records found.</td></tr>';
+  const selectedYear = document.getElementById("searchYear")?.value || "ALL";
+  const selectedCustomer = document.getElementById("searchCustomer")?.value || "ALL";
+  const keyword = (document.getElementById("searchKeyword")?.value || "").trim().toLowerCase();
+
+  const filteredData = recordData.filter(row => {
+    const fin = getRecordFinancials(row);
+
+    // 1. Dashboard 卡片互動篩選
+    if (activeCardFilter === "revenue" && fin.paidRevenue <= 0) return false;
+    if (activeCardFilter === "pending" && fin.pendingAR <= 0) return false;
+    if (activeCardFilter === "projects" && !fin.isActiveProject) return false;
+
+    // 2. 年份篩選
+    if (selectedYear !== "ALL") {
+      const rowYear = String(getYearFromRecord(row.date));
+      if (rowYear !== selectedYear) return false;
+    }
+
+    // 3. 客戶篩選
+    if (selectedCustomer !== "ALL") {
+      if (String(row.customer || "").trim() !== selectedCustomer) return false;
+    }
+
+    // 4. 關鍵字模糊搜尋
+    if (keyword) {
+      const searchableText = [
+        row.date, row.statusText, row.customer, row.site,
+        row.prNo, row.poNo, row.invoiceNo, row.category,
+        row.description, row.status, row.owner
+      ].join(" ").toLowerCase();
+      if (!searchableText.includes(keyword)) return false;
+    }
+
+    return true;
+  });
+
+  const countBadge = document.getElementById("recordCountBadge");
+  if (countBadge) countBadge.innerText = `顯示 ${filteredData.length} / ${recordData.length} 筆紀錄`;
+
+  if (filteredData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="20" style="text-align:center; padding: 24px; color: #64748b;">找不到符合條件的紀錄</td></tr>';
     return;
   }
 
-  recordData.forEach(row => {
+  filteredData.forEach(row => {
     const tr = document.createElement("tr");
-    const qty = Number(row.qty || 0);
-    const unitPrice = Number(row.unitPrice || 0);
-    const total = qty * unitPrice;
-    
-    const pInfo = getRecordPaidAndAR(row, total);
+    const fin = getRecordFinancials(row);
 
     tr.innerHTML = `
       <td>${row.date || ''}</td>
       <td>${row.statusText || ''}</td>
-      <td>${row.customer || ''}</td>
+      <td><strong>${row.customer || ''}</strong></td>
       <td>${row.site || ''}</td>
       <td>${row.prNo || ''}</td>
       <td>${row.poNo || ''}</td>
       <td>${row.invoiceNo || ''}</td>
       <td>${row.category || ''}</td>
       <td>${row.description || ''}</td>
-      <td>$${total.toLocaleString()}</td>
-      <td>$${pInfo.i1.toLocaleString()}</td>
-      <td>$${pInfo.i2.toLocaleString()}</td>
-      <td>$${pInfo.i3.toLocaleString()}</td>
-      <td>$${pInfo.i4.toLocaleString()}</td>
-      <td><strong>$${pInfo.sumPaid.toLocaleString()}</strong></td>
-      <td><span class="badge ${getPaidBadgeClass(pInfo.displayPaidStatus)}">${pInfo.displayPaidStatus}</span></td>
-      <td>${pInfo.arHtml}</td>
-      <td>${row.status || 'Open'}</td>
+      <td><strong>${formatUSD(fin.totalAmount)}</strong></td>
+      <td>${formatUSD(fin.i1)}</td>
+      <td>${formatUSD(fin.i2)}</td>
+      <td>${formatUSD(fin.i3)}</td>
+      <td>${formatUSD(fin.i4)}</td>
+      <td><strong>${formatUSD(fin.sumPaid)}</strong></td>
+      <td><span class="badge ${getPaidBadgeClass(fin.displayPaidStatus)}">${fin.displayPaidStatus}</span></td>
+      <td>${fin.arHtml}</td>
+      <td>${fin.projectStatus}</td>
       <td>${row.owner || ''}</td>
       <td>
         <div class="action-btns">
@@ -133,6 +251,7 @@ function renderTable() {
   });
 }
 
+// 解析年份
 function getYearFromRecord(dateVal) {
   if (!dateVal) return new Date().getFullYear();
   const str = String(dateVal).trim();
@@ -142,33 +261,63 @@ function getYearFromRecord(dateVal) {
   return isNaN(y) ? new Date().getFullYear() : y;
 }
 
-function setupYearFilter() {
-  const yearSelect = document.getElementById("yearFilter");
-  if (!yearSelect) return;
-
-  const years = new Set();
-  const currentYear = new Date().getFullYear();
-  years.add(currentYear);
+// 初始化年份與客戶篩選下拉選單
+function setupFiltersAndDropdowns() {
+  const years = new Set([new Date().getFullYear()]);
+  const customers = new Set();
 
   recordData.forEach(row => {
-    if (row.date) {
-      const y = getYearFromRecord(row.date);
-      if (y) years.add(y);
-    }
+    if (row.date) years.add(getYearFromRecord(row.date));
+    if (row.customer) customers.add(String(row.customer).trim());
   });
 
   const sortedYears = Array.from(years).sort((a, b) => b - a);
-  yearSelect.innerHTML = "";
-  sortedYears.forEach(year => {
-    const option = document.createElement("option");
-    option.value = year;
-    option.textContent = year + " 年";
-    yearSelect.appendChild(option);
-  });
+  const sortedCustomers = Array.from(customers).sort();
 
-  yearSelect.value = sortedYears[0];
+  // 1. 年度統計表的年份選單
+  const yearFilter = document.getElementById("yearFilter");
+  if (yearFilter) {
+    const prevVal = yearFilter.value;
+    yearFilter.innerHTML = "";
+    sortedYears.forEach(y => {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y + " 年";
+      yearFilter.appendChild(opt);
+    });
+    if (prevVal && sortedYears.includes(Number(prevVal))) yearFilter.value = prevVal;
+  }
+
+  // 2. 明細搜尋列的年份選單
+  const searchYear = document.getElementById("searchYear");
+  if (searchYear) {
+    const prevSearchYear = searchYear.value;
+    searchYear.innerHTML = '<option value="ALL">所有年份 (All Years)</option>';
+    sortedYears.forEach(y => {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y + " 年";
+      searchYear.appendChild(opt);
+    });
+    if (prevSearchYear) searchYear.value = prevSearchYear;
+  }
+
+  // 3. 明細搜尋列的客戶選單
+  const searchCustomer = document.getElementById("searchCustomer");
+  if (searchCustomer) {
+    const prevCust = searchCustomer.value;
+    searchCustomer.innerHTML = '<option value="ALL">所有客戶 (All Customers)</option>';
+    sortedCustomers.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c;
+      opt.textContent = c;
+      searchCustomer.appendChild(opt);
+    });
+    if (prevCust) searchCustomer.value = prevCust;
+  }
 }
 
+// 渲染年度客戶收入統計 (套用最新 Pending AR 排除 Open 邏輯)
 function renderAnnualSummary() {
   const tbody = document.getElementById("annualSummary");
   const yearSelect = document.getElementById("yearFilter");
@@ -188,24 +337,15 @@ function renderAnnualSummary() {
       customerStats[customer] = { paid: 0, pending: 0, total: 0 };
     }
 
-    const totalAmount = Number(row.qty || 0) * Number(row.unitPrice || 0);
-    const pInfo = getRecordPaidAndAR(row, totalAmount);
-
-    customerStats[customer].total += totalAmount;
-
-    if (pInfo.displayPaidStatus === "Paid") {
-      customerStats[customer].paid += totalAmount;
-    } else if (pInfo.displayPaidStatus === "Partial") {
-      customerStats[customer].paid += pInfo.sumPaid;
-      customerStats[customer].pending += Math.max(0, totalAmount - pInfo.sumPaid);
-    } else {
-      customerStats[customer].pending += totalAmount;
-    }
+    const fin = getRecordFinancials(row);
+    customerStats[customer].total += fin.totalAmount;
+    customerStats[customer].paid += fin.paidRevenue;
+    customerStats[customer].pending += fin.pendingAR;
   });
 
-  const customers = Object.keys(customerStats);
+  const customers = Object.keys(customerStats).sort();
   if (customers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">${selectedYear} 年無紀錄</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#64748b;">${selectedYear} 年無紀錄</td></tr>`;
     return;
   }
 
@@ -214,17 +354,20 @@ function renderAnnualSummary() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${cust}</strong></td>
-      <td style="color: #27ae60; font-weight: bold;">$${stat.paid.toLocaleString()}</td>
-      <td style="color: #e67e22; font-weight: bold;">$${stat.pending.toLocaleString()}</td>
-      <td><strong>$${stat.total.toLocaleString()}</strong></td>
+      <td style="color: #059669; font-weight: bold;">${formatUSD(stat.paid)}</td>
+      <td style="color: #d97706; font-weight: bold;">${formatUSD(stat.pending)}</td>
+      <td><strong>${formatUSD(stat.total)}</strong></td>
     `;
     tbody.appendChild(tr);
   });
 }
 
+// 點擊 Edit 帶入舊資料
 function editRecord(id) {
   const target = recordData.find(item => String(item.id).trim() === String(id).trim());
   if (!target) return;
+
+  const fin = getRecordFinancials(target);
 
   document.getElementById("recordId").value = target.id || "";
   document.getElementById("date").value = target.date || "";
@@ -239,15 +382,12 @@ function editRecord(id) {
   document.getElementById("qty").value = target.qty !== undefined ? target.qty : 1;
   document.getElementById("unitPrice").value = target.unitPrice !== undefined ? target.unitPrice : 0;
   
-  document.getElementById("inst1").value = target.inst1 !== undefined ? target.inst1 : (target.partialPaidAmount || 0);
-  document.getElementById("inst2").value = target.inst2 !== undefined ? target.inst2 : 0;
-  document.getElementById("inst3").value = target.inst3 !== undefined ? target.inst3 : 0;
-  document.getElementById("inst4").value = target.inst4 !== undefined ? target.inst4 : 0;
+  document.getElementById("inst1").value = fin.i1;
+  document.getElementById("inst2").value = fin.i2;
+  document.getElementById("inst3").value = fin.i3;
+  document.getElementById("inst4").value = fin.i4;
 
-  const total = Number(target.qty || 0) * Number(target.unitPrice || 0);
-  const pInfo = getRecordPaidAndAR(target, total);
-
-  document.getElementById("paidStatus").value = pInfo.displayPaidStatus;
+  document.getElementById("paidStatus").value = fin.displayPaidStatus;
   document.getElementById("status").value = target.status || "Open";
   document.getElementById("owner").value = target.owner || "";
 
@@ -259,6 +399,7 @@ function editRecord(id) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// 重置表單
 function resetForm() {
   document.getElementById("recordId").value = "";
   document.getElementById("date").valueAsDate = new Date();
@@ -286,6 +427,7 @@ function resetForm() {
   if (cancelBtn) cancelBtn.style.display = "none";
 }
 
+// 新增或更新資料
 async function saveRecord() {
   const submitBtn = document.getElementById("submitBtn");
   const recordId = document.getElementById("recordId").value;
@@ -307,7 +449,6 @@ async function saveRecord() {
   const sumPaid = inst1 + inst2 + inst3 + inst4;
 
   let paidStatusVal = document.getElementById("paidStatus").value;
-
   if (totalAmount > 0 && sumPaid >= totalAmount) {
     paidStatusVal = "Paid";
   } else if (sumPaid > 0 && sumPaid < totalAmount) {
@@ -343,35 +484,30 @@ async function saveRecord() {
   try {
     const res = await fetch(GAS_API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8"
-      },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      throw new Error("API post error");
-    }
+    if (!res.ok) throw new Error("API post error");
 
     resetForm();
     await fetchRecords();
   } catch (error) {
     console.error("Error saving record:", error);
-    alert("儲存失敗，請檢查 API 網址與 Apps Script 權限！");
+    alert("儲存失敗，請檢查網路或 API 連線！");
   } finally {
     submitBtn.disabled = false;
   }
 }
 
+// 刪除紀錄
 async function deleteRecord(id) {
   if (!confirm("Are you sure you want to delete this record?")) return;
 
   try {
     await fetch(GAS_API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8"
-      },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: "delete", id: id })
     });
     await fetchRecords();
@@ -381,6 +517,7 @@ async function deleteRecord(id) {
   }
 }
 
+// 匯出 Excel (USD)
 function exportToExcel() {
   if (!recordData || recordData.length === 0) {
     alert("目前沒有可匯出的紀錄！");
@@ -393,8 +530,7 @@ function exportToExcel() {
   }
 
   const exportList = recordData.map(item => {
-    const total = (Number(item.qty || 0) * Number(item.unitPrice || 0));
-    const pInfo = getRecordPaidAndAR(item, total);
+    const fin = getRecordFinancials(item);
 
     return {
       "Date (日期)": item.date || "",
@@ -407,57 +543,43 @@ function exportToExcel() {
       "Category (類別)": item.category || "",
       "Description (項目說明)": item.description || "",
       "Qty (數量)": item.qty || 1,
-      "Unit Price (單價)": item.unitPrice || 0,
-      "Total Amount (總金額)": total,
-      "1st Inst (第 1 期)": pInfo.i1,
-      "2nd Inst (第 2 期)": pInfo.i2,
-      "3rd Inst (第 3 期)": pInfo.i3,
-      "4th Inst (第 4 期)": pInfo.i4,
-      "Total Paid (已付總額)": pInfo.sumPaid,
-      "Paid Status (付款狀態)": pInfo.displayPaidStatus,
-      "Pending AR (未收應收金額)": Math.max(0, total - pInfo.sumPaid),
-      "Project Status (專案狀態)": item.status || "Open",
+      "Unit Price (USD)": item.unitPrice || 0,
+      "Total Amount (USD)": fin.totalAmount,
+      "1st Inst (USD)": fin.i1,
+      "2nd Inst (USD)": fin.i2,
+      "3rd Inst (USD)": fin.i3,
+      "4th Inst (USD)": fin.i4,
+      "Total Paid (USD)": fin.sumPaid,
+      "Paid Status": fin.displayPaidStatus,
+      "Pending AR (USD - Excl. Open)": fin.pendingAR,
+      "Project Status": fin.projectStatus,
       "Owner (負責人)": item.owner || ""
     };
   });
 
   const worksheet = XLSX.utils.json_to_sheet(exportList);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Revenue & AR");
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Revenue & AR (USD)");
 
-  const fileName = `PTW_Revenue_Tracker_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const fileName = `PTW_Revenue_Tracker_USD_${new Date().toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }
 
+// 更新頂部 Dashboard KPI
 function updateDashboard() {
   let totalRevenue = 0;
   let pendingAR = 0;
   let activeProjects = 0;
 
   recordData.forEach(row => {
-    const total = Number(row.qty || 0) * Number(row.unitPrice || 0);
-    const pInfo = getRecordPaidAndAR(row, total);
-    const category = String(row.category || '').trim();
-
-    if (pInfo.displayPaidStatus === "Paid") {
-      totalRevenue += total;
-    } else if (pInfo.displayPaidStatus === "Partial") {
-      totalRevenue += pInfo.sumPaid;
-      pendingAR += Math.max(0, total - pInfo.sumPaid);
-    } else {
-      pendingAR += total;
-    }
-
-    const isProjectOrUpgrade = (category === "Project" || category === "Upgrade");
-    const isPaidOrPartial = (pInfo.displayPaidStatus === "Paid" || pInfo.displayPaidStatus === "Partial");
-
-    if (isProjectOrUpgrade && isPaidOrPartial) {
-      activeProjects++;
-    }
+    const fin = getRecordFinancials(row);
+    totalRevenue += fin.paidRevenue;
+    pendingAR += fin.pendingAR;
+    if (fin.isActiveProject) activeProjects++;
   });
 
-  document.getElementById("revenue").innerText = `$${totalRevenue.toLocaleString()}`;
-  document.getElementById("pending").innerText = `$${pendingAR.toLocaleString()}`;
+  document.getElementById("revenue").innerText = formatUSD(totalRevenue);
+  document.getElementById("pending").innerText = formatUSD(pendingAR);
   document.getElementById("projects").innerText = activeProjects;
 }
 

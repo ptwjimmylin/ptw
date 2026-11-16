@@ -3,48 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PTW Revenue & AR Tracker</title>
+    <title>PTW Revenue & AR Tracker (USD)</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <header>
-        <h1>PTW Revenue & AR Tracker</h1>
+        <h1>PTW Revenue & AR Tracker (USD)</h1>
+        <span style="font-size: 13px; color: #64748b;">All amounts in USD ($)</span>
     </header>
 
+    <!-- 可點擊互動 Dashboard 卡片 -->
     <section class="dashboard">
-        <div class="card">
-            <h3>Total Revenue (NTD)</h3>
-            <span id="revenue">$0</span>
+        <div class="card" id="card-revenue" onclick="toggleDashboardFilter('revenue')">
+            <h3>Total Revenue (USD)</h3>
+            <span class="kpi-value" id="revenue">$0</span>
+            <small class="kpi-hint">點擊篩選已收款紀錄</small>
         </div>
-        <div class="card">
-            <h3>Pending AR (NTD)</h3>
-            <span id="pending">$0</span>
+        <div class="card" id="card-pending" onclick="toggleDashboardFilter('pending')">
+            <h3>Pending AR (USD)</h3>
+            <span class="kpi-value" id="pending">$0</span>
+            <small class="kpi-hint">點擊篩選應收款 (不含 Open)</small>
         </div>
-        <div class="card">
+        <div class="card" id="card-projects" onclick="toggleDashboardFilter('projects')">
             <h3>Active Projects</h3>
-            <span id="projects">0</span>
+            <span class="kpi-value" id="projects">0</span>
+            <small class="kpi-hint">點擊篩選進行中 Project / Upgrade</small>
         </div>
     </section>
 
-    <!-- 每年各客戶收入統計表 (帶滾動條) -->
-    <section class="table-container" style="margin-bottom: 20px;">
+    <!-- 每年各客戶收入統計表 -->
+    <section class="table-container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2>Annual Revenue by Customer (年度客戶收入統計)</h2>
+            <h2>Annual Revenue by Customer (年度客戶收入統計 - USD)</h2>
             <div>
-                <label for="yearFilter" style="font-weight: bold; font-size: 14px;">Select Year: </label>
-                <select id="yearFilter" onchange="renderAnnualSummary()" style="width: auto; display: inline-block; padding: 5px 10px;">
+                <label for="yearFilter" style="font-weight: 600; font-size: 13.5px;">Select Year: </label>
+                <select id="yearFilter" onchange="renderAnnualSummary()" style="width: auto; display: inline-block; padding: 6px 12px;">
                 </select>
             </div>
         </div>
-        <div style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 1;">
+        <div style="max-height: 240px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <table>
+                <thead>
                     <tr>
                         <th>Customer (客戶)</th>
-                        <th>Paid Revenue (已收收入)</th>
-                        <th>Pending AR (未收應收)</th>
-                        <th>Total Contract Amount (總合約金額)</th>
+                        <th>Paid Revenue (已收金額 USD)</th>
+                        <th>Pending AR (應收餘額 USD)</th>
+                        <th>Total Contract Amount (合約總額 USD)</th>
                     </tr>
                 </thead>
                 <tbody id="annualSummary">
@@ -54,7 +59,9 @@
         </div>
     </section>
 
+    <!-- 新增 / 編輯表單 -->
     <section class="form">
+        <h2 style="margin-bottom: 15px;">Add / Edit Record (新增或編輯紀錄)</h2>
         <input type="hidden" id="recordId" value="">
 
         <div class="form-grid">
@@ -64,7 +71,7 @@
             </div>
 
             <div class="form-group">
-                <label for="statusText">Status (進度狀態)</label>
+                <label for="statusText">Status (進度說明)</label>
                 <input type="text" id="statusText" placeholder="填寫進度狀態">
             </div>
 
@@ -133,28 +140,28 @@
             </div>
 
             <div class="form-group">
-                <label for="unitPrice">Unit Price (單價)</label>
-                <input type="number" id="unitPrice" value="0" min="0" placeholder="Unit Price" oninput="autoUpdatePaidStatus()">
+                <label for="unitPrice">Unit Price (美金單價 USD)</label>
+                <input type="number" id="unitPrice" value="0" min="0" step="0.01" placeholder="Unit Price" oninput="autoUpdatePaidStatus()">
             </div>
 
             <div class="form-group">
-                <label for="inst1">1st Installment (第 1 期款)</label>
-                <input type="number" id="inst1" value="0" min="0" placeholder="第 1 期款" oninput="autoUpdatePaidStatus()">
+                <label for="inst1">1st Installment (第 1 期 USD)</label>
+                <input type="number" id="inst1" value="0" min="0" step="0.01" placeholder="第 1 期款" oninput="autoUpdatePaidStatus()">
             </div>
 
             <div class="form-group">
-                <label for="inst2">2nd Installment (第 2 期款)</label>
-                <input type="number" id="inst2" value="0" min="0" placeholder="第 2 期款" oninput="autoUpdatePaidStatus()">
+                <label for="inst2">2nd Installment (第 2 期 USD)</label>
+                <input type="number" id="inst2" value="0" min="0" step="0.01" placeholder="第 2 期款" oninput="autoUpdatePaidStatus()">
             </div>
 
             <div class="form-group">
-                <label for="inst3">3rd Installment (第 3 期款)</label>
-                <input type="number" id="inst3" value="0" min="0" placeholder="第 3 期款" oninput="autoUpdatePaidStatus()">
+                <label for="inst3">3rd Installment (第 3 期 USD)</label>
+                <input type="number" id="inst3" value="0" min="0" step="0.01" placeholder="第 3 期款" oninput="autoUpdatePaidStatus()">
             </div>
 
             <div class="form-group">
-                <label for="inst4">4th Installment (第 4 期款)</label>
-                <input type="number" id="inst4" value="0" min="0" placeholder="第 4 期款" oninput="autoUpdatePaidStatus()">
+                <label for="inst4">4th Installment (第 4 期 USD)</label>
+                <input type="number" id="inst4" value="0" min="0" step="0.01" placeholder="第 4 期款" oninput="autoUpdatePaidStatus()">
             </div>
 
             <div class="form-group">
@@ -183,45 +190,67 @@
         </div>
 
         <div class="form-actions" style="display: flex; justify-content: space-between;">
-            <div>
-                <button type="button" id="submitBtn" onclick="saveRecord()">Save Record</button>
-                <button type="button" id="cancelBtn" onclick="resetForm()" style="display: none;">Cancel</button>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" id="submitBtn" class="btn-primary" onclick="saveRecord()">Save Record</button>
+                <button type="button" id="cancelBtn" class="btn-secondary" onclick="resetForm()" style="display: none;">Cancel</button>
             </div>
-            <button type="button" onclick="exportToExcel()" style="background-color: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 15px;">📊 Export Excel</button>
+            <button type="button" class="btn-export" onclick="exportToExcel()">📊 Export Excel</button>
         </div>
     </section>
 
+    <!-- 明細紀錄與搜尋列 -->
     <section class="table-container">
-        <h2>Detailed Records (明細紀錄)</h2>
-        <table style="margin-top: 15px;">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Status (進度)</th>
-                    <th>Customer</th>
-                    <th>Site (廠別)</th>
-                    <th>PR No</th>
-                    <th>PO No</th>
-                    <th>Invoice No</th>
-                    <th>Category</th>
-                    <th>Description</th>
-                    <th>Total Amount</th>
-                    <th>1st Inst</th>
-                    <th>2nd Inst</th>
-                    <th>3rd Inst</th>
-                    <th>4th Inst</th>
-                    <th>Total Paid</th>
-                    <th>Paid Status</th>
-                    <th>AR Warning (應收亮燈)</th>
-                    <th>Project Status</th>
-                    <th>Owner</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="records">
-                <tr><td colspan="20" style="text-align:center;">Loading data...</td></tr>
-            </tbody>
-        </table>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Detailed Records (明細紀錄 - USD)</h2>
+            <span id="recordCountBadge" class="badge badge-neutral">0 筆紀錄</span>
+        </div>
+
+        <!-- 搜尋與篩選控制列 -->
+        <div class="filter-bar">
+            <select id="searchYear" onchange="renderTable()">
+                <option value="ALL">所有年份 (All Years)</option>
+            </select>
+
+            <select id="searchCustomer" onchange="renderTable()">
+                <option value="ALL">所有客戶 (All Customers)</option>
+            </select>
+
+            <input type="text" id="searchKeyword" class="search-box" placeholder="🔍 搜尋 PR / PO / Invoice / 廠別 / 說明 / 負責人..." oninput="renderTable()">
+
+            <button type="button" class="btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="clearAllFilters()">清除篩選 (Reset)</button>
+        </div>
+
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Status (進度)</th>
+                        <th>Customer</th>
+                        <th>Site (廠別)</th>
+                        <th>PR No</th>
+                        <th>PO No</th>
+                        <th>Invoice No</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Total Amount (USD)</th>
+                        <th>1st Inst</th>
+                        <th>2nd Inst</th>
+                        <th>3rd Inst</th>
+                        <th>4th Inst</th>
+                        <th>Total Paid</th>
+                        <th>Paid Status</th>
+                        <th>AR Warning (應收亮燈)</th>
+                        <th>Project Status</th>
+                        <th>Owner</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="records">
+                    <tr><td colspan="20" style="text-align:center;">Loading data...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </section>
 
     <script src="app.js"></script>
