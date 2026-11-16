@@ -9,9 +9,15 @@
 </head>
 <body>
     <header>
-        <div>
-            <h1>PTW Revenue & AR Tracker (USD)</h1>
+        <!-- 左側：公司 Logo + 系統標題 -->
+        <div class="brand-header">
+            <img src="logo.png" alt="Company Logo" class="company-logo" onerror="this.style.display='none'">
+            <div>
+                <h1>PTW Revenue & AR Tracker (USD)</h1>
+                <span class="subtitle">Enterprise Accounts Receivable & Project Management</span>
+            </div>
         </div>
+        <!-- 右側：新增與匯出按鈕 -->
         <div style="display: flex; gap: 10px; align-items: center;">
             <button type="button" class="btn-primary" onclick="openAddModal()">➕ Add Record (新增紀錄)</button>
             <button type="button" class="btn-export" onclick="exportToExcel()">📊 Export Excel</button>
@@ -64,7 +70,7 @@
         </div>
     </section>
 
-    <!-- 明細紀錄與搜尋列（可視空間最大化） -->
+    <!-- 明細紀錄與搜尋列 -->
     <section class="table-container">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -74,7 +80,6 @@
             <button type="button" class="btn-primary" style="padding: 7px 14px; font-size: 13px;" onclick="openAddModal()">➕ Add Record</button>
         </div>
 
-        <!-- 搜尋與篩選控制列 -->
         <div class="filter-bar">
             <select id="searchYear" onchange="renderTable()">
                 <option value="ALL">所有年份 (All Years)</option>
