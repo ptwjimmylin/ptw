@@ -1,4 +1,4 @@
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwz1mIlmzidcudz0JDXqhquZs69EoJfBLX5M_IZFU4uLrHp9ATCv4l_SRYo14p_H6LI1g/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwGt8haW2-v1Au7sjkROJaS7pgOzShcCVx2nN3oQFsWxIZ7WkKnx5lTEBw4D085N5UcjA/exec"";
 
 let recordData = [];
 let activeCardFilter = null; // 'revenue' | 'pending' | 'projects' | null
